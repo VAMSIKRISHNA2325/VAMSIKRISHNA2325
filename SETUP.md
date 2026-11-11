@@ -4,7 +4,9 @@
 
 The design follows the reference you supplied, [Avi Vashishta's animated SVG README article](https://www.avivashishta.com/blog/github-profile-readme-animated-svg-cards). It uses paper `#f3f3f1`, ink `#111111`, blue `#2f55ff`, red `#ef3b2d`, and yellow `#ffc81a`.
 
-The stack runs from the hero and blue contribution graph to the monthly chart, three coloured link tiles, and one card per featured repository. Each linked tile uses an image width of `32.5%` so the three share one row.
+The stack runs from the hero and blue contribution graph to the monthly chart, three coloured link tiles, and a three-column row of featured repositories. The tiles count up real values: the number of featured projects, active days, and contributions. Both rows use images at `32.5%` width.
+
+The "What I'm building" heading has light and dark SVG variants selected by the README's `<picture>` element. The name shines blue, tiles bounce, numbers count up, and small details pulse or sweep. `STATIC=1` shows final values without animation; reduced-motion preferences show the same final state.
 
 Edit `NAME`, `NAME_LINES`, `BIO`, `PROJECTS`, and the colour constants near the top of the script to personalize the cards. `NAME_LINES` controls the two visible hero lines; keep `NAME` in sync for accessible text. Project descriptions come from the public [gesture_control](https://github.com/VAMSIKRISHNA2325/gesture_control), [f1-arch](https://github.com/VAMSIKRISHNA2325/f1-arch), and [laser-surface prediction](https://github.com/VAMSIKRISHNA2325/PREDICTIVE-MODELING-OF-LASER-TREATED-METAL-SURFACES) repositories.
 
@@ -56,7 +58,7 @@ Reduced-motion preferences also show the final state in the animated cards. Dela
 
 The profile repository is `VAMSIKRISHNA2325/VAMSIKRISHNA2325`. To publish from a fresh setup, create that **public** repository if it does not already exist, then commit and push these files to its default branch. The repository name must match the username for GitHub to display its README on the profile.
 
-The workflow in `.github/workflows/refresh-cards.yml` runs daily at **02:17 UTC / 07:47 IST**, and can be started from **Actions → Refresh profile cards → Run workflow**. Scheduled runs become active after the workflow reaches the default branch; GitHub can delay scheduled runs. Allow Actions to write repository contents in **Settings → Actions → General → Workflow permissions**. Branch rules must also permit the bot's commits.
+The workflow in `.github/workflows/refresh-cards.yml` runs daily at **02:17 UTC / 07:47 IST**, on pushes to the renderer, assets, dependencies, or workflow, and on demand from **Actions → Refresh profile cards → Run workflow**. Scheduled runs become active after the workflow reaches the default branch; GitHub can delay scheduled runs. Allow Actions to write repository contents in **Settings → Actions → General → Workflow permissions**. Branch rules must also permit the bot's commits.
 
 The workflow refreshes JSON, checks calculations, renders animated SVGs, and commits only changed contribution data, cards, and README. It uses the built-in `GITHUB_TOKEN` for committing; no personal access token is required. The bot's push does not trigger another push workflow.
 

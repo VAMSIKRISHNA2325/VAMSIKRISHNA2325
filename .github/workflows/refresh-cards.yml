@@ -4,6 +4,13 @@ on:
   schedule:
     - cron: '17 2 * * *' # 02:17 UTC / 07:47 IST
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - render_cards.py
+      - assets/**
+      - requirements.txt
+      - .github/workflows/refresh-cards.yml
 
 permissions:
   contents: write

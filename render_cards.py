@@ -39,19 +39,19 @@ PORTRAIT = ROOT / "assets/portrait.png"
 # Normalized crop keeps the face and upper body legible at ASCII resolution.
 PORTRAIT_CROP = (.39, .42, .69, .67)  # Set to None to use the whole image.
 PROJECTS = [
-    dict(slug="gesture_control", title="Gesture control", category="HUMAN-COMPUTER INTERACTION",
+    dict(slug="gesture_control", title="Gesture control",
          description=["Control Windows with webcam hand gestures", "and offline voice commands."],
          tags=["Python", "MediaPipe", "OpenCV", "Vosk"],
-         tile="Build", caption="Tools that respond to you.", mark="gesture"),
-    dict(slug="f1-arch", title="F1 Arch", category="INTERACTIVE WEB",
+         tile="Build", caption="Tools that respond to you."),
+    dict(slug="f1-arch", title="F1 Arch",
          description=["A cinematic Formula 1 scroll experience", "exploring the car, cockpit, and livery."],
          tags=["TypeScript", "Next.js", "Framer Motion"],
-         tile="Create", caption="Interfaces with a little motion.", mark="race"),
+         tile="Create", caption="Interfaces with a little motion."),
     dict(slug="PREDICTIVE-MODELING-OF-LASER-TREATED-METAL-SURFACES",
-         title="Laser surface prediction", category="APPLIED MACHINE LEARNING",
+         title="Laser surface prediction",
          description=["Predict surface roughness and hardness", "through an interactive Streamlit interface."],
          tags=["Python", "scikit-learn", "Streamlit"],
-         tile="Explore", caption="Patterns worth understanding.", mark="model"),
+         tile="Explore", caption="Patterns worth understanding."),
 ]
 
 
@@ -172,8 +172,8 @@ def rule(y, x1=42, x2=958):
     return f'<path d="M{x1} {y}H{x2}" stroke="{BORDER}"/>'
 
 
-def arrow(x, y, size=12, color=ACCENT):
-    return (f'<path d="M{x} {y+size}l{size} -{size}m-{size} 0h{size}v{size}" '
+def arrow(x, y, size=12, color=ACCENT, motion=""):
+    return (f'<path class="{motion}" d="M{x} {y+size}l{size} -{size}m-{size} 0h{size}v{size}" '
             f'fill="none" stroke="{color}" stroke-width="1.5"/>')
 
 
@@ -185,16 +185,24 @@ def signal(x, y, delay, static):
     return f'<circle class="signal" cx="{x}" cy="{y}" r="3.5" fill="{ACCENT}" opacity="1">{animation}</circle>'
 
 
-def glyph(kind, x, y, scale=1):
-    if kind == "gesture":
-        shape = '<path d="M17 67V37a6 6 0 0 1 12 0v15-35a6 6 0 0 1 12 0v33-40a6 6 0 0 1 12 0v40-29a6 6 0 0 1 12 0v37l9-11a7 7 0 0 1 10 9L66 83H34L17 67Z"/>'
-    elif kind == "race":
-        shape = '<path d="M10 70h75M21 58l12-17h29l14 17H21Zm15-17 9-14h16l9 14M16 64h65"/><circle cx="31" cy="65" r="8"/><circle cx="68" cy="65" r="8"/>'
-    else:
-        shape = '<path d="M15 78V15m0 63h70M25 64l16-17 15 7 24-29"/><circle cx="25" cy="64" r="3"/><circle cx="41" cy="47" r="3"/><circle cx="56" cy="54" r="3"/><circle cx="80" cy="25" r="3"/>'
-    return (f'<g transform="translate({x} {y}) scale({scale})" fill="none" '
-            f'stroke="{ACCENT}" stroke-width="1.5" stroke-linecap="round" '
-            f'stroke-linejoin="round">{shape}</g>')
+def count_up(value, color, begin, static):
+    final = text(24, 111, value, 56, color, "serif number-still")
+    if static:
+        return final
+    finish = f'{begin + 1.1:.3f}s'
+    frames = []
+    for i in range(19):
+        start = begin + i * 1.1 / 18
+        stop = "" if i == 18 else (f'<set attributeName="opacity" to="0" '
+                                       f'begin="{begin + (i+1)*1.1/18:.3f}s" fill="freeze"/>')
+        number = round(value * (1 - (1-i/18)**3))
+        frames.append(text(24, 111, number, 56, color, "serif",
+                           'opacity="0"').replace('</text>',
+                           f'<set attributeName="opacity" to="1" begin="{start:.3f}s" '
+                           f'fill="freeze"/>{stop}</text>'))
+    final = final.replace('class="serif number-still"',
+                          f'class="serif number-still" style="--finish:{finish}"')
+    return f'<g class="number-motion" style="--finish:{finish}">' + "".join(frames) + '</g>' + final
 
 
 def subset_fonts(body):
@@ -237,23 +245,38 @@ def svg(body, title, description, height, delay, static, width=1000, background=
     if not static:
         style += f"""
         .enter{{animation:enter .8s ease-out {delay:.2f}s backwards}}
+        .rise{{animation:enter .8s ease-out var(--wait) backwards}}
         .tile{{transform-origin:center;animation:swing 1.1s cubic-bezier(.2,.65,.25,1) {delay:.2f}s backwards}}
         .portrait-row{{animation:appear .3s ease-out var(--wait) backwards}}
         .bar{{transform-box:fill-box;transform-origin:center bottom;animation:grow .8s cubic-bezier(.2,.7,.2,1) backwards;animation-delay:var(--wait)}}
         .cell{{transform-box:fill-box;transform-origin:center;animation:pop .5s ease-out backwards;animation-delay:var(--wait)}}
+        .signal{{animation:pulse 1.6s ease-in-out 1.6s infinite}}
+        .nudge{{transform-box:fill-box;animation:nudge 1.8s ease-in-out 4.3s infinite}}
+        .sheen{{animation:sheen 5s ease-in-out var(--wait) infinite}}
+        .ring{{transform-box:fill-box;transform-origin:center;animation:ring 1s ease-out var(--wait) both}}
+        .number-motion{{animation:hide-count .001s step-end var(--finish) forwards}}
+        .number-still{{animation:show-count .001s step-end var(--finish) backwards}}
         @keyframes enter{{from{{opacity:0;transform:translateY(10px)}}to{{opacity:1;transform:translateY(0)}}}}
         @keyframes grow{{from{{transform:scaleY(0)}}to{{transform:scaleY(1)}}}}
         @keyframes appear{{from{{opacity:0}}to{{opacity:1}}}}
         @keyframes pop{{0%{{opacity:0;transform:scale(.3)}}70%{{opacity:1;transform:scale(1.12)}}100%{{opacity:1;transform:scale(1)}}}}
         @keyframes swing{{0%{{opacity:0;transform:translateY(60px) scale(.75) rotate(-6deg)}}65%{{opacity:1;transform:translateY(-6px) scale(1.02) rotate(1deg)}}100%{{opacity:1;transform:none}}}}
+        @keyframes pulse{{0%,100%{{opacity:1}}50%{{opacity:.3}}}}
+        @keyframes nudge{{0%,100%{{transform:none}}50%{{transform:translate(3px,-2px)}}}}
+        @keyframes sheen{{0%,12%{{transform:translateX(-80px)}}38%,100%{{transform:translateX(400px)}}}}
+        @keyframes ring{{from{{opacity:.65;transform:scale(.2)}}to{{opacity:0;transform:scale(2.4)}}}}
+        @keyframes hide-count{{to{{opacity:0}}}}
+        @keyframes show-count{{from{{opacity:0}}to{{opacity:1}}}}
         @media(prefers-reduced-motion:reduce){{
           *{{animation:none!important;transition:none!important}}
-          .enter,.tile,.bar,.cell,.portrait-row{{opacity:1!important;transform:none!important}}
+          .enter,.rise,.tile,.bar,.cell,.portrait-row,.nudge{{opacity:1!important;transform:none!important}}
           .signal{{opacity:1!important}}
+          .shine-overlay,.number-motion,.sheen,.ring{{display:none!important}}
+          .number-still{{display:inline!important}}
         }}
         """
     panel = (f'<rect x="{3 if width == 320 else 0}" y="0" width="{width-6 if width == 320 else width}" '
-             f'height="{height}" rx="14" fill="{background}"/>')
+             f'height="{height}" rx="14" fill="{background}"/>') if background else ""
     result = (f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" '
               f'viewBox="0 0 {width} {height}" role="img" aria-labelledby="title desc">\n'
               f'<title id="title">{escape(title)}</title><desc id="desc">{escape(description)}</desc>\n'
@@ -265,14 +288,23 @@ def svg(body, title, description, height, delay, static, width=1000, background=
 
 
 def hero(static):
-    body = text(48, 42, f"{USERNAME} / HELLO, WORLD", 12, MUTED, "mono")
-    body += text(44, 166, NAME_LINES[0], 132, INK, "serif")
-    body += text(44, 282, NAME_LINES[1], 132, ACCENT, "italic")
-    body += text(49, 334, BIO, 18, "#3a3a3c")
+    body = text(48, 42, f"{USERNAME} / HELLO, WORLD", 12, MUTED, "mono rise", 'style="--wait:0s"')
+    body += text(44, 166, NAME_LINES[0], 132, INK, "serif rise", 'style="--wait:.15s"')
+    body += text(44, 282, NAME_LINES[1], 132, ACCENT, "italic rise", 'style="--wait:.30s"')
+    if not static:
+        body += (f'<defs><linearGradient id="name-shine" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="600" y2="0">'
+                 f'<stop offset="0" stop-color="{ACCENT}"/><stop offset=".42" stop-color="{ACCENT}"/>'
+                 f'<stop offset=".5" stop-color="#ffffff"/><stop offset=".58" stop-color="{ACCENT}"/>'
+                 f'<stop offset="1" stop-color="{ACCENT}"/>'
+                 '<animateTransform attributeName="gradientTransform" type="translate" '
+                 'values="-600 0;600 0;600 0" keyTimes="0;.45;1" dur="7s" begin="1.6s" '
+                 'repeatCount="indefinite"/></linearGradient></defs>')
+        body += text(44, 282, NAME_LINES[1], 132, 'url(#name-shine)', "italic rise shine-overlay", 'style="--wait:.30s"')
+    body += text(49, 334, BIO, 18, "#3a3a3c", "rise", 'style="--wait:.55s"')
     body += rule(371, 48, 952)
-    body += signal(52, 404, .8, static)
+    body += '<g class="rise" style="--wait:.8s">' + signal(52, 404, .8, static)
     body += text(68, 409, "PYTHON  /  TYPESCRIPT  /  JAVA", 12, MUTED, "mono")
-    body += text(950, 409, "ALWAYS BUILDING. ALWAYS LEARNING.", 10, MUTED, "mono", 'text-anchor="end"')
+    body += text(950, 409, "ALWAYS BUILDING. ALWAYS LEARNING.", 10, MUTED, "mono", 'text-anchor="end"') + '</g>'
     if PORTRAIT:
         from PIL import Image, ImageOps
 
@@ -290,21 +322,35 @@ def hero(static):
                 line = "".join(ramp[(255-portrait.getpixel((col, row)))*(len(ramp)-1)//255]
                                for col in range(portrait.width))
                 body += text(672, f"{61+row*3.15:.2f}", line, 4.1, INK, "mono portrait-row bold",
-                             f'xml:space="preserve" style="--wait:{.15+row*.018:.3f}s"')
+                             f'xml:space="preserve" style="--wait:{.25+row*.018:.3f}s"')
     else:
         body += text(820, 246, "vk", 150, INK, "italic", 'text-anchor="middle"')
     portrait_desc = "An ASCII portrait rendered from the supplied photograph." if PORTRAIT else "A personal monogram."
-    return svg(body, f"{NAME} — {BIO}", "Python, TypeScript, and Java. " + portrait_desc, 440, .08, static)
+    return svg(body, f"{NAME} — {BIO}", "Python, TypeScript, and Java. " + portrait_desc, 440, .08, static, motion="plain")
 
 
-def tile(project, index, static):
+def tile(project, index, stats, static):
     ink = INK if index == 2 else "#ffffff"
-    body = text(25, 34, f"0{index+1} / MY WORLD", 11, ink, "mono") + arrow(277, 23, color=ink)
-    body += text(24, 115, project["tile"], 64, ink, "italic")
-    body += text(26, 152, project["caption"], 13, ink)
+    delay = 3.1 + index*.25
+    value, unit = [(len(PROJECTS), "projects"), (stats["active"], "active days"),
+                   (stats["total"], "contributions")][index]
+    body = text(25, 34, f"0{index+1} / {project['tile'].upper()}", 11, ink, "mono")
+    body += arrow(277, 23, color=ink, motion="nudge")
+    if not static:
+        body += ('<defs><clipPath id="tile-clip"><rect x="3" y="0" width="314" height="215" rx="14"/></clipPath>'
+                 '<linearGradient id="tile-shine"><stop offset="0" stop-color="#fff" stop-opacity="0"/>'
+                 '<stop offset=".5" stop-color="#fff" stop-opacity=".35"/>'
+                 '<stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient></defs>')
+        body += (f'<g clip-path="url(#tile-clip)"><circle class="ring" style="--wait:{delay+.5:.2f}s" '
+                 f'cx="275" cy="174" r="38" fill="none" stroke="{ink}" stroke-opacity=".5" stroke-width="2"/>'
+                 f'<rect class="sheen" style="--wait:{delay+1.4:.2f}s" x="-80" y="-10" width="80" '
+                 'height="235" fill="url(#tile-shine)"/></g>')
+    body += count_up(value, ink, delay+.45, static)
+    body += text(24, 141, unit, 28, ink, "italic")
+    body += text(26, 171, project["caption"], 13, ink)
     labels = ["GESTURE + VOICE", "WEB + MOTION", "DATA + PREDICTION"]
-    body += text(26, 192, labels[index], 10, ink, "mono")
-    return svg(body, project["tile"], project["caption"], 215, 3.1 + index*.25, static,
+    body += text(26, 197, labels[index], 10, ink, "mono")
+    return svg(body, project["tile"], f"{value} {unit}. {project['caption']}", 215, delay, static,
                320, TILE_COLORS[index], "tile")
 
 
@@ -339,29 +385,39 @@ def activity(snapshot, stats, static):
     peak = stats["peak"]
     peak_day = date.fromisoformat(peak["date"]) if peak else None
     peak_label = f"{peak_day.day} {calendar.month_abbr[peak_day.month]}" if peak else "—"
-    metrics = [(89, f"{stats['streak']} days", "CURRENT STREAK"),
+    metrics = [(89, f"{stats['streak']} {'day' if stats['streak'] == 1 else 'days'}", "CURRENT STREAK"),
                (180, str(stats["active"]), "ACTIVE DAYS"),
                (271, peak_label, f"BUSIEST DAY / {peak['count'] if peak else 0} CONTRIBUTIONS")]
     for y, value, label in metrics:
         body += text(734, y, value, 44, INK, "serif") + text(734, y+25, label, 10, MUTED, "mono")
     desc = (f"{stats['total']} contributions across {stats['active']} active days. Current streak: "
-            f"{stats['streak']} days. Busiest day: {peak['date'] if peak else 'none'}, "
+            f"{stats['streak']} {'day' if stats['streak'] == 1 else 'days'}. Busiest day: {peak['date'] if peak else 'none'}, "
             f"{peak['count'] if peak else 0} contributions. Monthly totals: "
             + "; ".join(f"{m}: {n}" for m, n in months))
     return svg(body, "Monthly contributions and activity statistics", desc, 350, 2.0, static)
 
 
 def repository(project, index, static):
-    delay = 4.35 + index*.4
-    body = text(42, 37, f"0{index+1} / SELECTED WORK", 11, MUTED, "mono")
-    body += text(958, 37, project["category"], 10, ACCENT, "mono", 'text-anchor="end"')
-    body += text(42, 92, project["title"], 47, INK, "serif")
-    for line, value in enumerate(project["description"]):
-        body += text(44, 129 + line*25, value, 18, "#3a3a3c")
-    body += rule(175)
-    body += text(44, 204, "  /  ".join(project["tags"]), 11, MUTED, "mono")
-    body += glyph(project["mark"], 824, 58, .95) + arrow(943, 192)
-    return svg(body, project["title"], " ".join(project["description"]) + " " + ", ".join(project["tags"]), 225, delay, static)
+    delay = 4.65 + index*.12
+    names = ["Gesture control", "F1 Arch", "Laser surface ML"]
+    blurbs = [("Hands-free Windows control", "by gesture and voice."),
+              ("A cinematic Formula 1", "scroll experience."),
+              ("Predict roughness and", "hardness after laser treatment.")]
+    languages = ["Python", "TypeScript", "Python"]
+    body = f'<rect x="24" y="26" width="8" height="8" rx="2" fill="{TILE_COLORS[index]}"/>'
+    body += text(24, 73, names[index], 32, INK, "serif")
+    for line, value in enumerate(blurbs[index]):
+        body += text(24, 108 + line*20, value, 14, "#3a3a3c")
+    body += rule(148, 24, 296)
+    body += text(24, 174, languages[index], 11, MUTED, "mono") + arrow(278, 159)
+    return svg(body, project["title"], " ".join(project["description"]) + " " + ", ".join(project["tags"]), 190, delay, static, 320)
+
+
+def section_title(dark, static):
+    ink = "#e6edf3" if dark else INK
+    body = text(18, 54, "What I'm", 52, ink, "serif")
+    body += text(222, 54, "building", 52, ACCENT, "italic")
+    return svg(body, "What I'm building", "Selected projects", 76, 4.4, static, background=None)
 
 
 def graph(snapshot, stats, static):
@@ -425,8 +481,10 @@ def render(static):
     stats = statistics(snapshot)
     cards = {"hero.svg": hero(static)}
     for i, project in enumerate(PROJECTS):
-        cards[f"tile-{i+1}.svg"] = tile(project, i, static)
+        cards[f"tile-{i+1}.svg"] = tile(project, i, stats, static)
     cards["activity.svg"] = activity(snapshot, stats, static)
+    cards["title-building-light.svg"] = section_title(False, static)
+    cards["title-building-dark.svg"] = section_title(True, static)
     for i, project in enumerate(PROJECTS):
         cards[f"repo-{i+1}.svg"] = repository(project, i, static)
     cards["contributions.svg"] = graph(snapshot, stats, static)
@@ -434,27 +492,32 @@ def render(static):
     for name, source in cards.items():
         atomic_write(ROOT / "cards" / name, source)
     graph_img = f'<a href="{GITHUB}?tab=overview"><img src="cards/contributions.svg" width="100%" alt="{stats["total"]} contributions on {stats["active"]} active days over the last 365 days." /></a>'
-    activity_img = f'<img src="cards/activity.svg" width="100%" alt="{stats["total"]} contributions; {stats["active"]} active days; current streak {stats["streak"]} days. Monthly chart through {snapshot["asOf"]}." />'
+    activity_img = f'<img src="cards/activity.svg" width="100%" alt="{stats["total"]} contributions; {stats["active"]} active days; current streak {stats["streak"]} {"day" if stats["streak"] == 1 else "days"}. Monthly chart through {snapshot["asOf"]}." />'
     lines = [f'<a href="{GITHUB}"><img src="cards/hero.svg" width="100%" alt="{escape(NAME + ": " + BIO)}" /></a>',
              "", graph_img, "", activity_img, "", '<p align="center">']
     tiles = []
+    values = [len(PROJECTS), stats["active"], stats["total"]]
+    units = ["featured projects", "active days", "contributions"]
     for i, project in enumerate(PROJECTS):
-        tiles.append(f'<a href="{GITHUB}/{project["slug"]}"><img src="cards/tile-{i+1}.svg" width="32.5%" alt="{project["tile"]}: {project["caption"]}" /></a>')
+        tiles.append(f'<a href="{GITHUB}/{project["slug"]}"><img src="cards/tile-{i+1}.svg" width="32.5%" alt="{project["tile"]}: {values[i]} {units[i]}. Opens {project["title"]}." /></a>')
     # Inline whitespace can wrap the third image on narrow GitHub profile layouts.
     lines.append("".join(tiles))
-    lines.extend(["</p>", ""])
+    lines.extend(["</p>", "", '<picture><source media="(prefers-color-scheme: dark)" srcset="cards/title-building-dark.svg" /><img src="cards/title-building-light.svg" width="100%" alt="What I\'m building" /></picture>', "", '<p align="center">'])
+    repos = []
     for i, project in enumerate(PROJECTS):
         alt = escape(project["title"] + ": " + " ".join(project["description"]))
-        lines.extend([f'<a href="{GITHUB}/{project["slug"]}"><img src="cards/repo-{i+1}.svg" width="100%" alt="{alt}" /></a>', ""])
+        repos.append(f'<a href="{GITHUB}/{project["slug"]}"><img src="cards/repo-{i+1}.svg" width="32.5%" alt="{alt}" /></a>')
+    lines.extend(["".join(repos), "</p>"])
     readme = "\n".join(lines) + "\n"
     atomic_write(ROOT / "README.md", readme)
     preview = ('<!doctype html><html lang="en"><meta charset="utf-8">'
                '<meta name="viewport" content="width=device-width,initial-scale=1">'
                f'<title>{NAME} / Profile preview</title><style>'
                'body{margin:0;background:#ffffff;padding:40px 20px}main{max-width:1000px;margin:auto}'
-               'img{height:auto;vertical-align:top}main>a,main>img{display:block;margin:0 0 14px}'
+               'img{height:auto;vertical-align:top}main>a,main>img,main>picture{display:block;margin:0 0 14px}'
                'p{text-align:center;margin:0 0 14px}'
                '@media(max-width:600px){body{padding:16px 10px}}'
+               '@media(prefers-color-scheme:dark){body{background:#0d1117}}'
                '</style><main>' + readme + '</main></html>')
     atomic_write(ROOT / "preview.html", preview)
     print(f"Rendered {len(cards)} {'static' if static else 'animated'} cards; {stats['total']} real contributions. Open preview.html.")
@@ -495,6 +558,9 @@ def self_test():
         pass
     else:
         raise AssertionError("Missing source count was accepted")
+    animated = count_up(32, INK, 3.5, False)
+    assert animated.count('<set ') == 37 and 'number-motion' in animated and '>32</text>' in animated
+    assert '<set ' not in count_up(32, INK, 3.5, True)
     print("Self-tests passed: streaks, leap day, zero activity, monthly sums, ties, invalid data, source parsing.")
 
 
